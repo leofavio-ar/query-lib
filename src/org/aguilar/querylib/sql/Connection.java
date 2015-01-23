@@ -3,6 +3,8 @@ package org.aguilar.querylib.sql;
 /**
  *
  * @author Leo Aguilar
+ * Trébol Informatica
+ * http://www.gruposcit.com
  */
 import java.sql.SQLException;
 
