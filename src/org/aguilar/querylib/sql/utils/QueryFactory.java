@@ -12,7 +12,7 @@ import org.aguilar.querylib.sql.Query2;
 
 /**
  *
- * @author Leonardo Favio Aguilar Ramírez
+ * @author Leo Aguilar
  */
 public class QueryFactory {
     

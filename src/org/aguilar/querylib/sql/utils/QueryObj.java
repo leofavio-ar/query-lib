@@ -6,7 +6,7 @@ package org.aguilar.querylib.sql.utils;
 
 /**
  *
- * @author Leonardo Favio Aguilar Ramírez
+ * @author Leo Aguilar
  */
 public class QueryObj {
 

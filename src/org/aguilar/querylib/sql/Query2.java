@@ -31,9 +31,7 @@ import javax.imageio.ImageIO;
 
 /**
  *
- * @author  ISC Leonardo Aguilar
- *          Caja Solidaria Sierra de San Juan SC de AP de RL de CV
- *          Jefatura de Sistemas e Información
+ * @author  Leo Aguilar
  */
 public class Query2 {
 

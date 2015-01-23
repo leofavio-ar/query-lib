@@ -8,7 +8,7 @@ import java.util.Hashtable;
  * SQLError is a utility class that maps MySQL error codes to X/Open
  * error codes as is required by the JDBC spec.
  *
- * @author Mark Matthews <mmatthew_at_worldserver.com> (Translated by Leonardo Aguilar)
+ * @author Mark Matthews <mmatthew_at_worldserver.com> (Translated by Leo Aguilar)
  * @version $Id: SQLError.java,v 1.2 2002/04/21 03:03:46 mark_matthews Exp $
  */
 public class SQLError {

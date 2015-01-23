@@ -28,7 +28,6 @@ import javax.imageio.ImageIO;
 /**
  *
  * @author Leo Aguilar
- * 
  */
 public class Query {
 
@@ -56,12 +55,6 @@ public class Query {
     public static java.sql.Connection getConnection() {
         return connection;
     }
-//    public static String[] getListByColumn(ArrayList<Map> arrayList, String column) {
-//        List<String> list = new ArrayList<String>();
-//        for (Map reg : arrayList)
-//            list.add(reg.get(column).toString());
-//        return java.util.Arrays.copyOf(list.toArray(), list.size(), String[].class);
-//    }
     public int update(String tableName,  String[] colNames, Object[] values, Object[][] conditions) {
         if (colNames.length != values.length)
             throw new IllegalArgumentException(ERR_ARRLONG);
