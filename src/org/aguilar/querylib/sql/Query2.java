@@ -120,10 +120,9 @@ public class Query2 {
             return -1;
         }
     }
-    private String obtenerPK(String tabla) {
+    private String obtenerPK(DatabaseMetaData metaData, String tabla) {
         try {
-            DatabaseMetaData dbmd = conexion.getMetaData();
-            ResultSet rs = dbmd.getPrimaryKeys(null, null, tabla);
+            ResultSet rs = metaData.getPrimaryKeys(null, null, tabla);
             if (rs.next()) {
                 return rs.getString("COLUMN_NAME");
             }
@@ -132,6 +131,18 @@ public class Query2 {
             Logger.getLogger(Query.class.getName()).log(Level.SEVERE, null, ex);
             return "";
         }
+    }
+    private Map obtenerTiposColumna(DatabaseMetaData metaData, String tabla) {
+        Map infoTabla = new LinkedHashMap();
+        try {
+            ResultSet rs = metaData.getColumns(null, null, tabla, null);
+            while (rs.next()) {
+                infoTabla.put(rs.getString("COLUMN_NAME"), rs.getString("TYPE_NAME"));
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Query2.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return infoTabla;
     }
     public int ejecutarSentencia(String sql) {
         PreparedStatement ps = null;
@@ -153,16 +164,18 @@ public class Query2 {
         }
         PreparedStatement ps = null;
         try {
-            String pk = columnaRetorno.equals("") ? obtenerPK(nombreTabla) : columnaRetorno;
             DatabaseMetaData meta = conexion.getMetaData();
+            String pk = columnaRetorno.equals("") ? obtenerPK(meta, nombreTabla) : columnaRetorno;
             boolean esPgSQL = meta.getDriverName().contains("postgresql");
+            Map infoTabla = obtenerTiposColumna(meta, nombreTabla);
+            SQLTypeMap stm = new SQLTypeMap();
             String insertString =
 //                "insert into " + nombreTabla + " (" + calculateColsString(columnas) + ")" + " values (" + calculateParamsString(valores) + ")";
                 "insert into " + nombreTabla + " (" + calcularColumnas(columnas) + ")" + " values (" + calcularParametros(valores) + ")" + 
                     (esPgSQL ? (!pk.equals("") ? " returning " + pk : "") : "") + ";";
             ps = conexion.prepareStatement(insertString, PreparedStatement.RETURN_GENERATED_KEYS);
             for (int i = 0; i < valores.length; i ++) {
-                colocarValor(ps, i + 1, valores[i]);
+                colocarValor(ps, i + 1, valores[i], stm.toSQLType(infoTabla.get(columnas[i]).toString()));
             }
             ResultSet rs;
             if (!pk.equals("")) {
@@ -236,8 +249,9 @@ public class Query2 {
             String insertString = "insert into " + nombreTabla + " (" + calcularColumnas(columnas) + ")" + " values (" + calcularParametros(valores[0]) + ");";
             ps = conexion.prepareStatement(insertString);
             for (int i = 0; i < valores.length; i ++) {
-                for (int j = 0; j < valores[i].length; j ++)
+                for (int j = 0; j < valores[i].length; j ++) {
                     colocarValor(ps, j + 1, valores[i][j]);
+                }
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -337,7 +351,12 @@ public class Query2 {
         }
     }
     private void colocarValor(PreparedStatement st, int i, Object valor) throws SQLException, IOException {
-        if (valor instanceof String) {
+        colocarValor(st, i, valor, java.sql.Types.OTHER);
+    }
+    private void colocarValor(PreparedStatement st, int i, Object valor, int tipoSQL) throws SQLException, IOException {
+        if (valor == null) {
+            st.setNull(i, tipoSQL);
+        } else if (valor instanceof String) {
             st.setString(i, valor.toString());
         } else if (valor instanceof Integer) {
             st.setInt(i, (Integer)valor);
@@ -422,5 +441,114 @@ public class Query2 {
         return bos.toByteArray();
     }
 //</editor-fold>    
+    
+    private class SQLTypeMap {
+        
+        private static final String CHAR        = "CHAR";
+        private static final String VARCHAR     = "VARCHAR";
+        private static final String LONGVARCHAR = "LONGVARCHAR";
+        private static final String NUMERIC     = "NUMERIC";
+        private static final String DECIMAL     = "DECIMAL";
+        private static final String TINYINT     = "TINYINT";
+        private static final String SMALLINT    = "SMALLINT";
+        private static final String INT         = "INT";
+        private static final String BIGINT      = "BIGINT";
+        private static final String TEXT        = "TEXT";
+        private static final String BIT         = "BIT";
+        private static final String DATE        = "DATE";
+        private static final String DOUBLE      = "DOUBLE";
+        
+        public int toSQLType(String tipo) {
+            int aux = Types.OTHER;
+            switch(tipo) {
+                case CHAR:
+                case VARCHAR:
+                case LONGVARCHAR:
+                case TEXT:
+                    aux = Types.VARCHAR;
+                    break;
+                case NUMERIC:
+                    aux = Types.NUMERIC;
+                    break;
+                case DECIMAL:
+                    aux = Types.DECIMAL;
+                    break;
+                case TINYINT:
+                    aux = Types.TINYINT;
+                    break;
+                case SMALLINT:
+                    aux = Types.SMALLINT;
+                    break;
+                case INT:
+                    aux = Types.INTEGER;
+                    break;
+                case BIGINT:
+                    aux = Types.BIGINT;
+                    break;
+                case BIT:
+                    aux = Types.BIT;
+                    break;
+                case DATE:
+                    aux = Types.DATE;
+                    break;
+                case DOUBLE:
+                    aux = Types.DOUBLE;
+            }
+            return aux;
+        }
+        
+        public Class<?> toClass(int tipo) {
+            Class<?> aux = Object.class;
+
+            switch (tipo) {
+                case Types.CHAR:
+                case Types.VARCHAR:
+                case Types.LONGVARCHAR:
+                    aux = String.class;
+                    break;
+                case Types.NUMERIC:
+                case Types.DECIMAL:
+                    aux = java.math.BigDecimal.class;
+                    break;
+                case Types.BIT:
+                    aux = Boolean.class;
+                    break;
+                case Types.TINYINT:
+                    aux = Byte.class;
+                    break;
+                case Types.SMALLINT:
+                    aux = Short.class;
+                    break;
+                case Types.INTEGER:
+                    aux = Integer.class;
+                    break;
+                case Types.BIGINT:
+                    aux = Long.class;
+                    break;
+                case Types.REAL:
+                case Types.FLOAT:
+                    aux = Float.class;
+                    break;
+                case Types.DOUBLE:
+                    aux = Double.class;
+                    break;
+                case Types.BINARY:
+                case Types.VARBINARY:
+                case Types.LONGVARBINARY:
+                    aux = Byte[].class;
+                    break;
+                case Types.DATE:
+                    aux = java.sql.Date.class;
+                    break;
+                case Types.TIME:
+                    aux = java.sql.Time.class;
+                    break;
+                case Types.TIMESTAMP:
+                    aux = java.sql.Timestamp.class;
+                    break;
+            }
+            return aux;
+        }
+    }
     
 }
