@@ -8,6 +8,7 @@ package org.aguilar.querylib.sql;
  */
 import java.sql.SQLException;
 
+@Deprecated
 public class Connection {
 
     public String driver, url, host, port, dbName, username, password;

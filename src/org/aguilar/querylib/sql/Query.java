@@ -29,6 +29,7 @@ import javax.imageio.ImageIO;
  *
  * @author Leo Aguilar
  */
+@Deprecated
 public class Query {
 
     private static java.sql.Connection connection;

@@ -19,7 +19,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -57,7 +56,7 @@ public class Query2 {
             Class.forName(driver);
             conexion = java.sql.DriverManager.getConnection(url, usuario, clave);
         } catch (Exception ex) {
-            Logger.getLogger(Query.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Query2.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     public void setConexion(java.sql.Connection connection) {
@@ -77,9 +76,12 @@ public class Query2 {
         String updateString =
                 "update " + nombreTabla + " set " + calcularPares(columnas) + " " + calcularCondiciones(condiciones) + ";";
         try {
+            DatabaseMetaData meta = conexion.getMetaData();
+            Map infoTabla = obtenerTiposColumna(meta, nombreTabla);
+            SQLTypeMap stm = new SQLTypeMap();
             ps = conexion.prepareStatement(updateString);
             for (int i = 0; i < valores.length; i ++) {
-                colocarValor(ps, i + 1, valores[i]);
+                colocarValor(ps, i + 1, valores[i], stm.toSQLType(infoTabla.get(columnas[i]).toString()));
             }
             for (int j = 0; j < condiciones.length; j ++) {
                 colocarValor(ps, j + valores.length + 1, condiciones[j][1]);
@@ -128,7 +130,7 @@ public class Query2 {
             }
             return "";
         } catch (SQLException ex) {
-            Logger.getLogger(Query.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Query2.class.getName()).log(Level.SEVERE, null, ex);
             return "";
         }
     }
@@ -150,7 +152,7 @@ public class Query2 {
             ps = conexion.prepareStatement(sql);
             return ps.execute() ? 1 : 2;
         } catch (SQLException ex) {
-            Logger.getLogger(Query.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Query2.class.getName()).log(Level.SEVERE, null, ex);
             return -1;
         }
     }
@@ -267,45 +269,17 @@ public class Query2 {
         return select("select * from " + nombreTabla);
     }
     public ArrayList<Map> select(String cadenaConsulta) {
-        if (conexion == null)
-            throw new NullPointerException(ERR_CONXINI);
-        ArrayList<Map> al = new ArrayList<Map>();
-        Map reg;
-        Statement st = null;
-        try {
-            st = conexion.createStatement();
-            ResultSet rs = st.executeQuery(cadenaConsulta);
-            ResultSetMetaData rsmd = rs.getMetaData();
-            while (rs.next()) {
-                reg = new LinkedHashMap();
-                for (int i = 1; i <= rsmd.getColumnCount(); i ++) {
-                    Object valor = rs.getObject(i);
-                    if (valor instanceof InputStream) {
-                        BufferedImage img = ImageIO.read((InputStream)valor);
-                        reg.put(rsmd.getColumnLabel(i), img);
-                    } else {
-                        reg.put(rsmd.getColumnLabel(i), valor);
-                    }
-                }
-                al.add(reg);
-            }
-            return al;
-        } catch (Exception ex) {
-            System.err.println(ex.getMessage());
-            return null;
-        } finally {
-            if (st!= null) { try { st.close(); } catch(Exception e) { } }
-        }
+        return select(cadenaConsulta, new Object[] {});
     }
-    public ArrayList<Map> select(String sqlQuery, Object[] params) {
+    public ArrayList<Map> select(String cadenaConsulta, Object[] params) {
         if (conexion == null) {
             throw new NullPointerException(ERR_CONXINI);
         }
-        ArrayList<Map> al = new ArrayList<Map>();
+        ArrayList<Map> al = new ArrayList<>();
         Map reg;
         PreparedStatement ps = null;
         try {
-            ps = conexion.prepareStatement(sqlQuery);
+            ps = conexion.prepareStatement(cadenaConsulta);
             for (int i = 0; i < params.length; i ++) {
                 colocarValor(ps, i + 1, params[i]);
             }
@@ -314,7 +288,18 @@ public class Query2 {
             while (rs.next()) {
                 reg = new LinkedHashMap();
                 for (int i = 1; i <= rsmd.getColumnCount(); i ++) {
-                    reg.put(rsmd.getColumnLabel(i), rs.getObject(i));
+                    Object valor;
+                    if (rsmd.getColumnType(i) == Types.BIGINT && rsmd.getColumnDisplaySize(i) == 1 && rsmd.getPrecision(i) == 1) {
+                        valor = rs.getBoolean(i);
+                    } else {
+                        valor = rs.getObject(i);
+                    }
+                    if (valor instanceof InputStream) {
+                        BufferedImage img = ImageIO.read((InputStream)valor);
+                        reg.put(rsmd.getColumnLabel(i), img);
+                    } else {
+                        reg.put(rsmd.getColumnLabel(i), valor);
+                    }
                 }
                 al.add(reg);
             }
@@ -343,7 +328,7 @@ public class Query2 {
             cs.registerOutParameter(1, Types.INTEGER);
             cs.execute();
             return cs.getInt(1);
-        } catch (Exception ex) {
+        } catch (SQLException | IOException ex) {
             System.out.println(ex.getMessage());
             return -5;
         } finally {
@@ -354,6 +339,9 @@ public class Query2 {
         colocarValor(st, i, valor, java.sql.Types.OTHER);
     }
     private void colocarValor(PreparedStatement st, int i, Object valor, int tipoSQL) throws SQLException, IOException {
+        if (tipoSQL == Types.BIT) {
+            valor = ((Boolean)valor).booleanValue();
+        }
         if (valor == null) {
             st.setNull(i, tipoSQL);
         } else if (valor instanceof String) {
