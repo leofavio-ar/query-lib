@@ -156,7 +156,6 @@ public class Query2 {
             return -1;
         }
     }
-//<editor-fold defaultstate="collapsed" desc="INSERT">
     private int doInsert(String nombreTabla, String[] columnas, Object[] valores, String columnaRetorno) {
         if (columnas.length != valores.length) {
             throw new IllegalArgumentException(ERR_ARRLONG);
@@ -200,10 +199,10 @@ public class Query2 {
             }
             return -2;
         } catch (IOException ex) {
-            Logger.getLogger(Query.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Query2.class.getName()).log(Level.SEVERE, null, ex);
             return -1;
         } catch (SQLException ex) {
-            System.err.println(ex.getErrorCode() + "-" + SQLError.mysqlToXOpen(ex.getErrorCode()) + ": " + ex.getMessage());
+            System.err.println(ex.getMessage() + "\n" + ex.getErrorCode() + "-" + SQLError.mysqlToXOpen(ex.getErrorCode()) + ": " + ex.getMessage());
             return ex.getErrorCode() * -1;
         } finally {
             if (ps != null) { try { ps.close(); } catch(Exception e) { } }
@@ -263,8 +262,6 @@ public class Query2 {
             if (ps != null) { try { ps.close(); } catch(Exception e) { } }
         }
     }
-//</editor-fold>
-//<editor-fold defaultstate="collapsed" desc="SELECT">
     public ArrayList<Map> seleccionarTabla(String nombreTabla) {
         return select("select * from " + nombreTabla);
     }
@@ -285,15 +282,48 @@ public class Query2 {
             }
             ResultSet rs = ps.executeQuery();
             ResultSetMetaData rsmd = rs.getMetaData();
+            SQLTypeMap typeMap = new SQLTypeMap();
             while (rs.next()) {
                 reg = new LinkedHashMap();
                 for (int i = 1; i <= rsmd.getColumnCount(); i ++) {
                     Object valor;
-                    if (rsmd.getColumnType(i) == Types.BIGINT && rsmd.getColumnDisplaySize(i) == 1 && rsmd.getPrecision(i) == 1) {
-                        valor = rs.getBoolean(i);
-                    } else {
-                        valor = rs.getObject(i);
+//                    Object valor = rs.getObject(i, typeMap.toClass(rsmd.getColumnType(i)));
+//                    reg.put(rsmd.getColumnLabel(i), valor);
+                    System.out.println(rsmd.getColumnLabel(i) + " => " + rsmd.getColumnTypeName(i));
+                    switch (rsmd.getColumnType(i)) {
+                        case Types.LONGNVARCHAR:
+                        case Types.VARCHAR  :
+                        case Types.CHAR     : valor = rs.getString(i)       ; break;
+                        case Types.NUMERIC  :
+                        case Types.DECIMAL  : valor = rs.getBigDecimal(i)   ; break;
+                        case Types.BOOLEAN  :
+                        case Types.BIT      : valor = rs.getBoolean(i)      ; break;
+                        case Types.TINYINT  : valor = rs.getByte(i)         ; break;
+                        case Types.SMALLINT : valor = rs.getShort(i)        ; break;
+                        case Types.INTEGER  : valor = rs.getInt(i)          ; break;
+                        case Types.BIGINT:
+                            if (rsmd.getColumnDisplaySize(i) == 1 && rsmd.getPrecision(i) == 1 && rsmd.getScale(i) == 0 && !rsmd.isSigned(i)) {
+                                valor = rs.getBoolean(i);
+                            } else {
+                                valor = rs.getLong(i);
+                            }
+                            break;
+                        case Types.FLOAT    :
+                        case Types.REAL     : valor = rs.getFloat(i)        ; break;
+                        case Types.DOUBLE   : valor = rs.getDouble(i)       ; break;
+                        case Types.LONGVARBINARY:
+                        case Types.VARBINARY:
+                        case Types.BINARY   : valor = rs.getBytes(i)        ; break;
+                        case Types.DATE     : valor = rs.getDate(i)         ; break;
+                        case Types.TIME     : valor = rs.getTime(i)         ; break;
+                        case Types.TIMESTAMP: valor = rs.getTimestamp(i)    ; break;
+                        default             : valor = rs.getObject(i)       ;
                     }
+//                    if (rsmd.getColumnType(i) == Types.BIGINT && rsmd.getColumnDisplaySize(i) == 1 && rsmd.getPrecision(i) == 1 && rsmd.getScale(i) == 0) {
+//                        valor = rs.getBoolean(i);
+//                    } else {
+//                        valor = rs.getObject(i);
+//                    }
                     if (valor instanceof InputStream) {
                         BufferedImage img = ImageIO.read((InputStream)valor);
                         reg.put(rsmd.getColumnLabel(i), img);
@@ -305,16 +335,15 @@ public class Query2 {
             }
             return al;
         } catch (SQLException ex) {
-            System.err.println(SQLError.get(SQLError.mysqlToXOpen(ex.getErrorCode())));
+            System.err.println(ex.getMessage() + "\n" + ex.getErrorCode() + "-" + SQLError.mysqlToXOpen(ex.getErrorCode()) + ": " + ex.getMessage());
             return null;
         } catch (Exception ex) {
-            Logger.getLogger(Query.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Query2.class.getName()).log(Level.SEVERE, null, ex);
             return null;
         } finally {
             if (ps != null) { try { ps.close(); } catch(Exception e) { } }
         }
     }
-//</editor-fold>
     public int call(String nombreProcAlmacenado, Object[] parametros) {
         CallableStatement cs = null;
         if (conexion == null) {
@@ -382,7 +411,6 @@ public class Query2 {
             st.setObject(i, valor);
         }
     }
-//<editor-fold defaultstate="collapsed" desc="CALCULAR">
     private String calcularColumnas(String[] cols) {
         String string = "";
         for (int i = 0; i < cols.length; i ++) {
@@ -428,7 +456,6 @@ public class Query2 {
         bos.close();
         return bos.toByteArray();
     }
-//</editor-fold>    
     
     private class SQLTypeMap {
         
