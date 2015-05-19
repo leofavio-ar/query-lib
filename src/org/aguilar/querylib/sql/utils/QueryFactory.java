@@ -52,7 +52,7 @@ public class QueryFactory {
         }
     }
     /**
-     * Realiza una sentencia select sobre el objeto Connection de la clase con los parámetros del objeto QueryObj
+     * Realiza una sentencia select sobre el objeto <code>Connection</code> de la clase con los parámetros del objeto <code>QueryObj</code>
      * @param queryObj
      * @return Un <code>ArrayList</code> de objetos <code>Map</code> que contienen un listado de los registros regresados por la consulta
      */
@@ -70,7 +70,7 @@ public class QueryFactory {
         return al;
     }
     /**
-     * Realiza un registro sobre el objeto Connection de la clase con los parámetros del objeto QueryObj
+     * Realiza un registro sobre el objeto <code>Connection</code> de la clase con los parámetros del objeto <code>QueryObj</code>
      * @param queryObj
      * @return Un <code>int</code> que representa el valor numérico de la nueva llave primaria de la tabla afectada, o un valor negativo que especifica el error SQL que se pudo haber producido
      */
@@ -83,7 +83,7 @@ public class QueryFactory {
         return r;
     }
     /**
-     * Realiza una actualización sobre el objeto Connection de la clase con los parámetros del objeto QueryObj
+     * Realiza una actualización sobre el objeto <code>Connection</code> de la clase con los parámetros del objeto <code>QueryObj</code>
      * @param queryObj
      * @return Un <code>int</code> que representa el número de los registros afectados de la tabla, o un valor negativo que especifica el error SQL que se pudo haber producido
      */
@@ -96,7 +96,7 @@ public class QueryFactory {
         return r;
     }
     /**
-     * Realiza una eliminación sobre el objeto Connection de la clase con los parámetros del objeto QueryObj
+     * Realiza una eliminación sobre el objeto <code>Connection</code> de la clase con los parámetros del objeto <code>QueryObj</code>
      * @param queryObj
      * @return Un <code>int</code> que representa el número de los registros afectados de la tabla, o un valor negativo que especifica el error SQL que se pudo haber producido
      */

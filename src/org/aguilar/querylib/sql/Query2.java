@@ -88,7 +88,7 @@ public class Query2 {
             }
             return ps.executeUpdate();
         } catch (SQLException ex) {
-            System.err.println(ex.getErrorCode() + SQLError.mysqlToXOpen(ex.getErrorCode()));
+            System.err.println(ex.getErrorCode() + SQLError.mysqlToXOpen(ex.getErrorCode()) + "\n" + ex.getMessage());
             return ex.getErrorCode() * -1;
         } catch (Exception ex) {
             System.err.println(ex.getMessage());
@@ -156,6 +156,12 @@ public class Query2 {
             return -1;
         }
     }
+    public int insert(String nombreTabla, String[] columnas, Object[] valores, String columnaRetorno) {
+        return doInsert(nombreTabla, columnas, valores, columnaRetorno);
+    }
+    public int insert(String nombreTabla, String[] columnas, Object[] valores) {
+        return doInsert(nombreTabla, columnas, valores, "");
+    }
     private int doInsert(String nombreTabla, String[] columnas, Object[] valores, String columnaRetorno) {
         if (columnas.length != valores.length) {
             throw new IllegalArgumentException(ERR_ARRLONG);
@@ -207,12 +213,6 @@ public class Query2 {
         } finally {
             if (ps != null) { try { ps.close(); } catch(Exception e) { } }
         }
-    }
-    public int insert(String nombreTabla, String[] columnas, Object[] valores, String columnaRetorno) {
-        return doInsert(nombreTabla, columnas, valores, columnaRetorno);
-    }
-    public int insert(String nombreTabla, String[] columnas, Object[] valores) {
-        return doInsert(nombreTabla, columnas, valores, "");
     }
     public void batchInsert(String nomobreTabla, String[] columnas, ArrayList<Map> valores) {
         if (valores.isEmpty()) {
@@ -282,14 +282,14 @@ public class Query2 {
             }
             ResultSet rs = ps.executeQuery();
             ResultSetMetaData rsmd = rs.getMetaData();
-            SQLTypeMap typeMap = new SQLTypeMap();
+//            SQLTypeMap typeMap = new SQLTypeMap();
             while (rs.next()) {
                 reg = new LinkedHashMap();
                 for (int i = 1; i <= rsmd.getColumnCount(); i ++) {
                     Object valor;
 //                    Object valor = rs.getObject(i, typeMap.toClass(rsmd.getColumnType(i)));
 //                    reg.put(rsmd.getColumnLabel(i), valor);
-                    System.out.println(rsmd.getColumnLabel(i) + " => " + rsmd.getColumnTypeName(i));
+//                    System.out.println(rsmd.getColumnLabel(i) + " => " + rsmd.getColumnTypeName(i));
                     switch (rsmd.getColumnType(i)) {
                         case Types.LONGNVARCHAR:
                         case Types.VARCHAR  :
@@ -302,7 +302,7 @@ public class Query2 {
                         case Types.SMALLINT : valor = rs.getShort(i)        ; break;
                         case Types.INTEGER  : valor = rs.getInt(i)          ; break;
                         case Types.BIGINT:
-                            if (rsmd.getColumnDisplaySize(i) == 1 && rsmd.getPrecision(i) == 1 && rsmd.getScale(i) == 0 && !rsmd.isSigned(i)) {
+                            if (rsmd.getColumnDisplaySize(i) == 1 && rsmd.getPrecision(i) == 1 && rsmd.getScale(i) == 0 && rsmd.isSigned(i)) {
                                 valor = rs.getBoolean(i);
                             } else {
                                 valor = rs.getLong(i);
@@ -328,7 +328,7 @@ public class Query2 {
                         BufferedImage img = ImageIO.read((InputStream)valor);
                         reg.put(rsmd.getColumnLabel(i), img);
                     } else {
-                        reg.put(rsmd.getColumnLabel(i), valor);
+                        reg.put(rsmd.getColumnLabel(i), rs.wasNull() ? null : valor);
                     }
                 }
                 al.add(reg);
@@ -386,6 +386,9 @@ public class Query2 {
         } else if (valor instanceof File) {
             FileInputStream fis = new FileInputStream((File)valor);
             st.setBinaryStream(i, fis, ((File)valor).length());
+        } else if (valor instanceof ByteArrayInputStream) {
+            byte[] bytea = getBytes((ByteArrayInputStream)valor);
+            st.setBinaryStream(i, new ByteArrayInputStream(bytea), bytea.length);
         } else if (valor instanceof byte[]) {
             byte[] bytea = getBytes(valor);
             st.setBinaryStream(i, new ByteArrayInputStream(bytea), bytea.length);
@@ -455,6 +458,23 @@ public class Query2 {
         oos.close();
         bos.close();
         return bos.toByteArray();
+    }
+    public static byte[] getBytes(InputStream is) throws IOException {
+        int len;
+        int size = 1024;
+        byte[] buf;
+        if (is instanceof ByteArrayInputStream) {
+          size = is.available();
+          buf = new byte[size];
+          len = is.read(buf, 0, size);
+        } else {
+          ByteArrayOutputStream bos = new ByteArrayOutputStream();
+          buf = new byte[size];
+          while ((len = is.read(buf, 0, size)) != -1)
+            bos.write(buf, 0, len);
+          buf = bos.toByteArray();
+        }
+        return buf;
     }
     
     private class SQLTypeMap {

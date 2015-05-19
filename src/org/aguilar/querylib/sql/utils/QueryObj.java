@@ -23,13 +23,7 @@ public class QueryObj {
     private String tabla;
 
     public QueryObj(int tipo) {
-        this.tipo = tipo;
-        this.sql = "";
-        this.parametros = new Object[0];
-        this.columnas = new String[0];
-        this.valores = new Object[0];
-        this.condiciones = new Object[0][0];
-        this.tabla = "";
+        this(tipo, "", new Object[0], new String[0], new Object[0], new Object[0][0], "");
     }
     public QueryObj(int tipo, String sql, Object[] parametros, String[] columnas, Object[] valores, Object[][] condiciones, String tabla) {
         this.tipo = tipo;
@@ -39,6 +33,10 @@ public class QueryObj {
         this.valores = valores;
         this.condiciones = condiciones;
         this.tabla = tabla;
+    }
+    @Override
+    public String toString() {
+        return sql;
     }
     public static QueryObj selQuery(String sql) {
         return new QueryObj(QueryObj.SQL_SELECT, sql, new Object[0], new String[0], new Object[0], new Object[0][0], "");
